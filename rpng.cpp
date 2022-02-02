@@ -124,13 +124,15 @@ void load(std::string const & filepath) {
 		case CHUNK_TYPE_IEND:
 			break;
 		default:
-			if(chunk.type & 0x5)
+			if(chunk.type & (1 << 5))
+				fmt::print(
+					"Ignoring unrecognized ancillary chunk: {}\n",
+					chunk
+				);
+			else
 				throw std::runtime_error(fmt::format(
 					"Encountered unrecognized critical chunk: {}", chunk
 				));
-			else
-				fmt::print("Ignoring unrecognized ancillary chunk: {}\n", chunk);
-			break;
 		}
 	}
 }
