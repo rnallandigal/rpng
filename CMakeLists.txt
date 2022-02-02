@@ -10,6 +10,7 @@ set(CMAKE_BUILD_TYPE Debug)
 set(CMAKE_USE_RELATIVE_PATHS True)
 
 set(INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
+set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR}/test)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -pedantic -Wno-unused-parameter -Wno-missing-field-initializers")
 
 # functions
@@ -22,10 +23,15 @@ function(import_libraries)
 	endforeach()
 endfunction()
 
-include_directories(BEFORE ${INCLUDE_DIR})
-import_libraries(fmt docopt)
+include_directories(BEFORE ${INCLUDE_DIR} ${TEST_DIR})
+import_libraries(fmt docopt gtest pthread)
 
 # main
 add_executable(${MAIN} ${MAIN}.cpp)
 target_link_libraries(${MAIN} fmt docopt)
 target_compile_options(${MAIN} PRIVATE -O0)
+
+# test
+add_executable(test test.cpp)
+target_link_libraries(test fmt gtest pthread)
+target_compile_options(test PRIVATE -O0)
