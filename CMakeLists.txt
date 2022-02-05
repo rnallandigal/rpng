@@ -35,3 +35,8 @@ target_compile_options(${MAIN} PRIVATE -O0)
 add_executable(test test.cpp)
 target_link_libraries(test fmt gtest pthread)
 target_compile_options(test PRIVATE -O0)
+
+# coroutines
+add_executable(coroutines test/coroutines.cpp)
+target_link_libraries(coroutines fmt)
+target_compile_options(coroutines PRIVATE -O0 -fcoroutines)
