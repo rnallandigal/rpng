@@ -24,16 +24,16 @@ function(import_libraries)
 endfunction()
 
 include_directories(BEFORE ${INCLUDE_DIR} ${TEST_DIR})
-import_libraries(fmt docopt gtest pthread)
+import_libraries(fmt docopt gtest pthread z)
 
 # main
 add_executable(${MAIN} ${MAIN}.cpp)
-target_link_libraries(${MAIN} fmt docopt)
+target_link_libraries(${MAIN} fmt docopt z)
 target_compile_options(${MAIN} PRIVATE -O0)
 
 # test
 add_executable(test test.cpp)
-target_link_libraries(test fmt gtest pthread)
+target_link_libraries(test fmt z gtest pthread)
 target_compile_options(test PRIVATE -O0)
 
 # coroutines

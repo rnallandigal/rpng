@@ -7,13 +7,16 @@
 #include <ios>
 #include <fstream>
 #include <unordered_map>
+#include <vector>
 
 #include <fmt/format.h>
+#include <zlib.h>
 
 #include "net.h"
 #include "constants.h"
 #include "chunk.h"
 #include "ihdr.h"
+#include "inflate.h"
 
 namespace rpng {
 
@@ -106,8 +109,10 @@ void load(std::string const & filepath) {
 	}
 
 	// Read each chunk
+	std::vector<chunk_t> chunks;
 	while(ifs && ifs.peek() != decltype(ifs)::traits_type::eof()) {
-		chunk_t chunk = read_chunk(ifs);
+		chunks.push_back(read_chunk(ifs));
+		chunk_t & chunk = chunks.back();
 		switch(chunk.type) {
 		case CHUNK_TYPE_IHDR:
 		case CHUNK_TYPE_PLTE:
@@ -126,6 +131,14 @@ void load(std::string const & filepath) {
 				));
 		}
 	}
+
+	std::vector<uint8_t> packed;
+	for(auto const & chunk : chunks) {
+		if(chunk.type == CHUNK_TYPE_IDAT)
+			packed.insert(packed.end(), chunk.data.begin(), chunk.data.end());
+	}
+
+	std::vector<uint8_t> filtered = inflate(packed);
 }
 
 }
