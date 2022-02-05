@@ -5,7 +5,7 @@
 #include <stdexcept>
 #include <memory>
 #include <ios>
-#include <fstream>
+#include <filesystem>
 #include <unordered_map>
 #include <vector>
 
@@ -17,6 +17,8 @@
 #include "chunk.h"
 #include "ihdr.h"
 #include "inflate.h"
+#include "filter.h"
+#include "ppm.h"
 
 namespace rpng {
 
@@ -137,8 +139,36 @@ void load(std::string const & filepath) {
 		if(chunk.type == CHUNK_TYPE_IDAT)
 			packed.insert(packed.end(), chunk.data.begin(), chunk.data.end());
 	}
+	fmt::print("packed size: {}\n", packed.size());
 
 	std::vector<uint8_t> filtered = inflate(packed);
+	fmt::print("inflated size: {}\n", filtered.size());
+
+	if(ihdr_data.interlace == 0 && ihdr_data.colour_type == 6) {
+		int channels = 4, byte_depth = ihdr_data.bit_depth / 8;
+		int stride = channels * byte_depth;
+
+		std::vector<uint8_t> raw = reconstruct(
+			filtered,
+			stride * ihdr_data.width,
+			stride
+		);
+		fmt::print("raw size: {}\n", raw.size());
+
+		std::filesystem::create_directory(
+			std::filesystem::path("./out"),
+			std::filesystem::path(".")
+		);
+
+		save_image(
+			fmt::format(
+				"out/{}.ppm",
+				std::filesystem::path(filepath).stem().string()
+			),
+			raw,
+			ihdr_data
+		);
+	}
 }
 
 }
