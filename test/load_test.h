@@ -4,48 +4,46 @@
 #include <gtest/gtest.h>
 
 #include "load.h"
+#include "libpng.h"
 
 namespace rpng {
 
-class LoadTest : public testing::Test {
+class ParseTest : public testing::Test {
 private:
 	std::string filepath;
 	bool should_fail;
 
+	void test_success() {
+		EXPECT_NO_THROW(load(filepath)) << filepath;
+	}
+
+	void test_failure() {
+		EXPECT_ANY_THROW(load(filepath)) << filepath;
+	}
+
 public:
-	LoadTest(std::string const & filepath, bool should_fail)
+	ParseTest(std::string const & filepath, bool should_fail)
 		: filepath(filepath), should_fail(should_fail) {}
 
 	void TestBody() override {
-		if(should_fail) {
-			EXPECT_THROW(load(filepath), std::runtime_error) << filepath;
-		} else {
-			EXPECT_NO_THROW(load(filepath)) << filepath;
-		}
+		should_fail ? test_failure() : test_success(); 
+	}
+};
+
+class DecodeTest : public testing::Test {
+private:
+	std::string filepath;
+
+public:
+	DecodeTest(std::string const & filepath) : filepath(filepath) {}
+
+	void TestBody() override {
+		auto a = load(filepath);
+		auto b = decode(filepath);
+
+		fmt::print("Checking {}, result: {}\n", filepath, a == b);
+		EXPECT_EQ(a, b);
 	}
 };
 
 }
-
-void register_load_tests() {
-	using namespace std::filesystem;
-	for(auto dentry : directory_iterator(path("./resources/pngsuite"))) {
-		if(!dentry.is_regular_file()) continue;
-		if(dentry.path().extension().string() != ".png") continue;
-
-		std::string filepath = dentry.path().string();
-		bool should_fail = dentry.path().filename().string().starts_with('x');
-
-		testing::RegisterTest(
-			"LoadTest",
-			path(filepath).filename().string().c_str(),
-			nullptr,
-			nullptr,
-			__FILE__,
-			__LINE__,
-			[=]() { return new rpng::LoadTest(filepath, should_fail); }
-		);
-	}
-}
-
-

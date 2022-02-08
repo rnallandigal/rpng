@@ -51,7 +51,7 @@ chunk_t read_chunk(std::ifstream & ifs) {
 	return chunk;
 }
 
-void load(std::string const & filepath) {
+std::vector<uint8_t> load(std::string const & filepath) {
 	fmt::print("{}\n", filepath);
 	std::ifstream ifs(filepath, std::ios::binary);
 	if(!ifs)
@@ -168,7 +168,9 @@ void load(std::string const & filepath) {
 			raw,
 			ihdr_data
 		);
+		return raw;
 	}
+	return {};
 }
 
 }
