@@ -1,4 +1,5 @@
 #include <filesystem>
+#include <stdexcept>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -14,11 +15,26 @@ private:
 	bool should_fail;
 
 	void test_success() {
-		EXPECT_NO_THROW(load(filepath)) << filepath;
+		EXPECT_EXIT(
+			(load(filepath), exit(0)),
+			testing::ExitedWithCode(0),
+			".*"
+		) << filepath;
 	}
 
 	void test_failure() {
-		EXPECT_ANY_THROW(load(filepath)) << filepath;
+		EXPECT_EXIT(
+			{
+				try {
+					load(filepath);
+				} catch(std::runtime_error const & e) {
+					exit(0);
+				}
+				exit(1);
+			},
+			testing::ExitedWithCode(0),
+			".*"
+		) << filepath;
 	}
 
 public:
