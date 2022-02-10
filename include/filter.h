@@ -3,6 +3,8 @@
 #include <vector>
 #include <cmath>
 
+#include "chunk/ihdr.h"
+
 namespace rpng {
 
 uint8_t paeth(uint8_t a, uint8_t b, uint8_t c) {
@@ -64,33 +66,43 @@ std::array<filter_fn_t, 5> recon_fn {
 	recon_none, recon_sub, recon_up, recon_avg, recon_paeth
 };
 
-std::vector<uint8_t> reconstruct(std::vector<uint8_t> const & in, int w, int stride) {
-	std::vector<uint8_t> ret;
+std::vector<uint8_t> reconstruct(
+	std::vector<uint8_t> const & in,
+	chunk_ihdr_data_t const & ihdr,
+	colour_properties_t const & colors
+) {
+	int stride_bits	= ihdr.bit_depth * colors.num_channels;
+	int stride = (stride_bits + 7) / 8;
+	int bytes_per_row = (ihdr.width * stride_bits + 7) / 8;
+	int bytes_per_scanline = bytes_per_row + 1;
 
-	int i = 0;
-	filter_fn_t R = recon_fn[in[i++]];
+	std::vector<uint8_t> out(ihdr.height * bytes_per_row);
+	uint8_t const * curr = in.data();
+	uint8_t * dest = out.data();
 
-	while((int)ret.size() % w < stride) ret.push_back(R(in[i++], 0, 0, 0));
-	while(ret.size() % w != 0) {
-		ret.push_back(R(in[i++], ret[ret.size() - stride], 0, 0));
+	// first byte
+	filter_fn_t R = recon_fn[*(curr++)];
+	*(dest++) = R(*(curr++), 0, 0, 0);
+
+	// first scanline
+	for(int i = 2; i < bytes_per_scanline; i++, curr++, dest++) {
+		*dest = R(*curr, *(dest - stride), 0, 0);
 	}
 
-	while(i < (int)in.size()) {
-		R = recon_fn[in[i++]];
+	// remaining scanlines
+	for(int i = 1; i < (int)ihdr.height; i++) {
+		R = recon_fn[*(curr++)];
 
-		while((int)ret.size() % w < stride)
-			ret.push_back(R(in[i++], 0, ret[ret.size() - w], 0));
+		// first byte
+		*dest = R(*(curr++), *(dest - stride), *(dest - bytes_per_row), 0);
+		dest++;
 
-		while(ret.size() % w != 0) {
-			ret.push_back(R(
-				in[i++],
-				ret[ret.size() - stride],
-				ret[ret.size() - w],
-				ret[ret.size() - stride - w]
-			));
+		// remaining bytes
+		for(int j = 2; j < bytes_per_scanline; j++, curr++, dest++) {
+			*dest = R(*curr, *(dest - stride), *(dest - bytes_per_row), *(dest - stride - bytes_per_row));
 		}
 	}
-	return ret;
+	return out;
 }
 
 }

@@ -15,10 +15,10 @@
 #include "net.h"
 #include "constants.h"
 #include "chunk.h"
-#include "ihdr.h"
 #include "inflate.h"
 #include "filter.h"
-#include "ppm.h"
+#include "netpbm.h"
+#include "chunk/ihdr.h"
 
 namespace rpng {
 
@@ -90,19 +90,15 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	if(ihdr_data.width == 0 || ihdr_data.height == 0)
 		throw std::runtime_error("Neither width nor height may be zero");
 
-	std::unordered_map<uint8_t, uint8_t> combos {
-		{ 0, 0b00011111 },
-		{ 2, 0b00011000 },
-		{ 3, 0b00001111 },
-		{ 4, 0b00011000 },
-		{ 6, 0b00011000 }
-	};
+	colour_properties_t colours = colour_properties[
+		std::min<uint8_t>(ihdr_data.colour_type, colour_properties.size() - 1)
+	];
 
-	if(auto it = combos.find(ihdr_data.colour_type); it == combos.end()) {
+	if(colours.colour_type == COLOUR_TYPE_INVALID) {
 		throw std::runtime_error(
 			fmt::format("Colour type {} is not valid", ihdr_data.colour_type)
 		);
-	} else if((ihdr_data.bit_depth & it->second) == 0) {
+	} else if((ihdr_data.bit_depth & colours.valid_bit_depths) == 0) {
 		throw std::runtime_error(fmt::format(
 			"Colour type {} and bit depth {} combination is not valid",
 			ihdr_data.colour_type,
@@ -111,10 +107,13 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	}
 
 	// Read each chunk
-	std::vector<chunk_t> chunks;
+	std::unordered_map<uint32_t, std::vector<chunk_t>> chunks;
 	while(ifs && ifs.peek() != decltype(ifs)::traits_type::eof()) {
-		chunks.push_back(read_chunk(ifs));
-		chunk_t & chunk = chunks.back();
+		chunk_t & chunk = [&]() -> chunk_t & {
+			chunk_t tmp = read_chunk(ifs);
+			return chunks[tmp.type].emplace_back(std::move(tmp));
+		}();
+
 		switch(chunk.type) {
 		case CHUNK_TYPE_IHDR:
 		case CHUNK_TYPE_PLTE:
@@ -135,42 +134,35 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	}
 
 	std::vector<uint8_t> packed;
-	for(auto const & chunk : chunks) {
-		if(chunk.type == CHUNK_TYPE_IDAT)
-			packed.insert(packed.end(), chunk.data.begin(), chunk.data.end());
+	for(auto const & chunk : chunks[CHUNK_TYPE_IDAT]) {
+		packed.insert(packed.end(), chunk.data.begin(), chunk.data.end());
 	}
 	fmt::print("packed size: {}\n", packed.size());
 
 	std::vector<uint8_t> filtered = inflate(packed);
 	fmt::print("inflated size: {}\n", filtered.size());
 
-	if(ihdr_data.interlace == 0 && ihdr_data.colour_type == 6) {
-		int channels = 4, byte_depth = ihdr_data.bit_depth / 8;
-		int stride = channels * byte_depth;
+	if(ihdr_data.interlace == 1) return {};
 
-		std::vector<uint8_t> raw = reconstruct(
-			filtered,
-			stride * ihdr_data.width,
-			stride
-		);
-		fmt::print("raw size: {}\n", raw.size());
+	std::vector<uint8_t> raw = reconstruct(filtered, ihdr_data, colours);
+	fmt::print("raw size: {}\n", raw.size());
 
-		std::filesystem::create_directory(
-			std::filesystem::path("./out"),
-			std::filesystem::path(".")
-		);
+	return raw;
 
-		save_image(
-			fmt::format(
-				"out/{}.ppm",
-				std::filesystem::path(filepath).stem().string()
-			),
-			raw,
-			ihdr_data
-		);
-		return raw;
-	}
-	return {};
+	/*
+	std::filesystem::create_directory(
+		std::filesystem::path("./out"),
+		std::filesystem::path(".")
+	);
+
+	save_image(
+		fmt::format(
+			"out/{}.ppm",
+			std::filesystem::path(filepath).stem().string()
+		),
+		raw,
+		ihdr_data
+	);*/
 }
 
 }

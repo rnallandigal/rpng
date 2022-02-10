@@ -14,12 +14,31 @@ struct chunk_ihdr_data_t {
 	uint8_t interlace;
 } __attribute__((packed));
 
-// Colour type
+// Colour types
 constexpr uint8_t COLOUR_TYPE_GREYSCALE			= 0;
-constexpr uint8_t COLOUR_TYPE_TRUECOLOR			= 2;
-constexpr uint8_t COLOUR_TYPE_INDEXED			= 3;
+constexpr uint8_t COLOUR_TYPE_TRUECOLOUR		= 2;
+constexpr uint8_t COLOUR_TYPE_INDEXED_COLOUR	= 3;
 constexpr uint8_t COLOUR_TYPE_GREYSCALE_ALPHA	= 4;
-constexpr uint8_t COLOUR_TYPE_TRUECOLOR_ALPHA	= 6;
+constexpr uint8_t COLOUR_TYPE_TRUECOLOUR_ALPHA	= 6;
+constexpr uint8_t COLOUR_TYPE_INVALID			= 0xff;
+
+struct colour_properties_t {
+	char name[32];
+	uint8_t colour_type			= COLOUR_TYPE_INVALID;
+	uint8_t valid_bit_depths;
+	uint8_t num_channels;
+};
+
+constexpr std::array<colour_properties_t, 8>  colour_properties {{
+	{ "Greyscale",				COLOUR_TYPE_GREYSCALE,			0b00011111, 1 },
+	{ },
+	{ "Truecolour",				COLOUR_TYPE_TRUECOLOUR,			0b00011000, 3 },
+	{ "Indexed-colour",			COLOUR_TYPE_INDEXED_COLOUR,		0b00001111, 1 },
+	{ "Greyscale with alpha",	COLOUR_TYPE_GREYSCALE_ALPHA,	0b00011000, 2 },
+	{ },
+	{ "Truecolour with alpha",	COLOUR_TYPE_TRUECOLOUR_ALPHA,	0b00011000,	4 },
+	{ }
+}};
 
 }
 
@@ -29,18 +48,6 @@ template <>
 struct formatter<rpng::chunk_ihdr_data_t> : base_formatter {
 	template <class FormatContext>
 	auto format(rpng::chunk_ihdr_data_t const & ihdr, FormatContext & ctx) {
-		std::string rendered_colour_type = [](uint8_t colour_type) {
-			using namespace rpng;
-			switch(colour_type) {
-				case COLOUR_TYPE_GREYSCALE:		 	return "Greyscale";
-				case COLOUR_TYPE_TRUECOLOR:		 	return "Truecolor";
-				case COLOUR_TYPE_INDEXED:		 	return "Indexed-color";
-				case COLOUR_TYPE_GREYSCALE_ALPHA:	return "Greyscale with alpha";
-				case COLOUR_TYPE_TRUECOLOR_ALPHA:	return "Truecolor with alpha";
-				default:							return "Unrecognised";
-			};
-		}(ihdr.colour_type);
-
 		std::string rendered_compression = ihdr.compression == 1
 			? "Unknown" : "DEFLATE";
 
@@ -61,7 +68,7 @@ struct formatter<rpng::chunk_ihdr_data_t> : base_formatter {
 			"interlace method   : {} ({})",
 			ihdr.width, ihdr.height,
 			ihdr.bit_depth,
-			rendered_colour_type, ihdr.colour_type,
+			rpng::colour_properties[ihdr.colour_type].name, ihdr.colour_type,
 			rendered_compression, ihdr.compression,
 			rendered_filter, ihdr.filter,
 			rendered_interlace, ihdr.interlace

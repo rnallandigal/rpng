@@ -5,7 +5,7 @@
 #include <vector>
 #include <string>
 
-#include "ihdr.h"
+#include "chunk/ihdr.h"
 
 namespace rpng {
 
