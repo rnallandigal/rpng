@@ -74,18 +74,18 @@ std::vector<uint8_t> reconstruct(
 	int stride_bits	= ihdr.bit_depth * colors.num_channels;
 	int stride = (stride_bits + 7) / 8;
 	int bytes_per_row = (ihdr.width * stride_bits + 7) / 8;
-	int bytes_per_scanline = bytes_per_row + 1;
 
 	std::vector<uint8_t> out(ihdr.height * bytes_per_row);
 	uint8_t const * curr = in.data();
 	uint8_t * dest = out.data();
 
-	// first byte
+	// first stride bytes
 	filter_fn_t R = recon_fn[*(curr++)];
-	*(dest++) = R(*(curr++), 0, 0, 0);
+	for(int i = 0; i < stride; i++)
+		*(dest++) = R(*(curr++), 0, 0, 0);
 
 	// first scanline
-	for(int i = 2; i < bytes_per_scanline; i++, curr++, dest++) {
+	for(int i = stride; i < bytes_per_row; i++, curr++, dest++) {
 		*dest = R(*curr, *(dest - stride), 0, 0);
 	}
 
@@ -93,12 +93,12 @@ std::vector<uint8_t> reconstruct(
 	for(int i = 1; i < (int)ihdr.height; i++) {
 		R = recon_fn[*(curr++)];
 
-		// first byte
-		*dest = R(*(curr++), *(dest - stride), *(dest - bytes_per_row), 0);
-		dest++;
+		// first stride bytes
+		for(int j = 0; j < stride; j++, curr++, dest++)
+			*dest = R(*curr, 0, *(dest - bytes_per_row), 0);
 
 		// remaining bytes
-		for(int j = 2; j < bytes_per_scanline; j++, curr++, dest++) {
+		for(int j = stride; j < bytes_per_row; j++, curr++, dest++) {
 			*dest = R(*curr, *(dest - stride), *(dest - bytes_per_row), *(dest - stride - bytes_per_row));
 		}
 	}
