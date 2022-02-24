@@ -49,9 +49,7 @@ uint8_t recon_up(uint8_t x, uint8_t a, uint8_t b, uint8_t c) {
 }
 
 uint8_t recon_avg(uint8_t x, uint8_t a, uint8_t b, uint8_t c) {
-	//return x + (uint8_t)(((uint16_t)a + b) / 2);
-	uint16_t y = (uint16_t)a + b;
-	return x + y / 2;
+	return x + (uint8_t)(((uint16_t)a + b) / 2);
 }
 
 uint8_t recon_paeth(uint8_t x, uint8_t a, uint8_t b, uint8_t c) {
