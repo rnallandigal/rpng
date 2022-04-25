@@ -142,9 +142,12 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	std::vector<uint8_t> filtered = inflate(packed);
 	fmt::print("inflated size: {}\n", filtered.size());
 
-	if(ihdr_data.interlace == 1) return {};
-
-	std::vector<uint8_t> raw = reconstruct(filtered, ihdr_data, colours);
+	std::vector<uint8_t> raw;
+	if(ihdr_data.interlace) {
+		raw = reconstruct_interlaced(filtered, ihdr_data, colours);
+	} else {
+		raw = reconstruct(filtered, ihdr_data, colours);
+	}
 	fmt::print("raw size: {}\n", raw.size());
 
 	return raw;
@@ -155,14 +158,15 @@ std::vector<uint8_t> load(std::string const & filepath) {
 		std::filesystem::path(".")
 	);
 
-	save_image(
+	save_greyscale(
 		fmt::format(
-			"out/{}.ppm",
+			"out/{}.pgm",
 			std::filesystem::path(filepath).stem().string()
 		),
 		raw,
 		ihdr_data
-	);*/
+	);
+	*/
 }
 
 }
