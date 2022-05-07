@@ -17,6 +17,7 @@
 #include "chunk.h"
 #include "inflate.h"
 #include "filter.h"
+#include "interlace.h"
 #include "netpbm.h"
 #include "chunk/ihdr.h"
 
@@ -142,11 +143,15 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	std::vector<uint8_t> filtered = inflate(packed);
 	fmt::print("inflated size: {}\n", filtered.size());
 
+	std::vector<uint8_t> reconstructed
+		= reconstruct(filtered, ihdr_data, colours);
+	fmt::print("reconstructed size: {}\n", filtered.size());
+
 	std::vector<uint8_t> raw;
 	if(ihdr_data.interlace) {
-		raw = reconstruct_interlaced(filtered, ihdr_data, colours);
+		raw = deinterlace(reconstructed, ihdr_data, colours);
 	} else {
-		raw = reconstruct(filtered, ihdr_data, colours);
+		raw = reconstructed;
 	}
 	fmt::print("raw size: {}\n", raw.size());
 
