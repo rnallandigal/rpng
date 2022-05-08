@@ -27,20 +27,36 @@ include_directories(BEFORE ${INCLUDE_DIR} ${TEST_DIR})
 import_libraries(fmt spdlog docopt gtest pthread z png)
 add_compile_definitions(
 	SPDLOG_FMT_EXTERNAL
-	SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG
 )
 
 # main
 add_executable(${MAIN} ${MAIN}.cpp)
-target_link_libraries(${MAIN} fmt spdlog docopt z png)
+target_link_libraries(${MAIN} docopt fmt spdlog z png)
 target_compile_options(${MAIN} PRIVATE -O0)
+target_compile_definitions(${MAIN}
+	PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG
+)
 
 # test
 add_executable(test test.cpp)
-target_link_libraries(test fmt spdlog z gtest pthread png)
+target_link_libraries(test fmt spdlog z png gtest pthread)
 target_compile_options(test PRIVATE -O0)
+target_compile_definitions(test
+	PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG
+)
+
+# bench
+add_executable(bench bench.cpp)
+target_link_libraries(bench fmt spdlog z png pthread benchmark)
+target_compile_options(bench PRIVATE -O3)
+target_compile_definitions(bench
+	PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_OFF
+)
 
 # coroutines
 add_executable(coroutines test/coroutines.cpp)
 target_link_libraries(coroutines fmt spdlog)
 target_compile_options(coroutines PRIVATE -O0 -fcoroutines)
+target_compile_definitions(coroutines
+	PRIVATE SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG
+)
