@@ -3,6 +3,7 @@
 #include <string>
 
 #include <gtest/gtest.h>
+#include <spdlog/spdlog.h>
 
 #include "load.h"
 #include "libpng.h"
@@ -57,7 +58,7 @@ public:
 		auto a = load(filepath);
 		auto b = decode(filepath);
 
-		fmt::print("Checking {}, result: {}\n", filepath, a == b);
+		SPDLOG_DEBUG("Checking {}, result: {}\n", filepath, a == b);
 		EXPECT_EQ(a, b);
 	}
 };

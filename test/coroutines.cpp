@@ -1,6 +1,6 @@
 #include <coroutine>
 
-#include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 struct task {
 	struct promise_type;
@@ -28,11 +28,14 @@ task nats() {
 }
 
 int main(int argc, char ** argv) {
+	spdlog::set_pattern("%^[%L]%$ %v");
+	spdlog::set_level(spdlog::level::trace);
+
 	std::coroutine_handle<task::promise_type> handle = nats();
 	for (int i = 0; i < 5; ++i) {
-		fmt::print("Caller: {}\n", i);
+		SPDLOG_DEBUG("Caller: {}\n", i);
 		handle.resume();
-		fmt::print("Received {}\n", handle.promise().val);
+		SPDLOG_DEBUG("Received {}\n", handle.promise().val);
 	}
 	handle.destroy();
 	return 0;

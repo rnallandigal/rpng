@@ -36,6 +36,9 @@ void register_tests() {
 }
 
 int main(int argc, char **argv) {
+	spdlog::set_pattern("%^[%L]%$ %v");
+	spdlog::set_level(spdlog::level::trace);
+
 	::testing::InitGoogleTest(&argc, argv);
 	register_tests();
 	return RUN_ALL_TESTS();

@@ -24,19 +24,23 @@ function(import_libraries)
 endfunction()
 
 include_directories(BEFORE ${INCLUDE_DIR} ${TEST_DIR})
-import_libraries(fmt docopt gtest pthread z png)
+import_libraries(fmt spdlog docopt gtest pthread z png)
+add_compile_definitions(
+	SPDLOG_FMT_EXTERNAL
+	SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG
+)
 
 # main
 add_executable(${MAIN} ${MAIN}.cpp)
-target_link_libraries(${MAIN} fmt docopt z png)
+target_link_libraries(${MAIN} fmt spdlog docopt z png)
 target_compile_options(${MAIN} PRIVATE -O0)
 
 # test
 add_executable(test test.cpp)
-target_link_libraries(test fmt z gtest pthread png)
+target_link_libraries(test fmt spdlog z gtest pthread png)
 target_compile_options(test PRIVATE -O0)
 
 # coroutines
 add_executable(coroutines test/coroutines.cpp)
-target_link_libraries(coroutines fmt)
+target_link_libraries(coroutines fmt spdlog)
 target_compile_options(coroutines PRIVATE -O0 -fcoroutines)

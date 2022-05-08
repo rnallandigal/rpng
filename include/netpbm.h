@@ -6,6 +6,7 @@
 #include <string>
 
 #include <fmt/format.h>
+#include <spdlog/spdlog.h>
 
 #include "chunk/ihdr.h"
 
@@ -16,10 +17,10 @@ void save_image(
 	std::vector<uint8_t> const & img,
 	chunk_ihdr_data_t const & ihdr_data
 ) {
-	fmt::print("width     : {}\n", ihdr_data.width);
-	fmt::print("height    : {}\n", ihdr_data.height);
-	fmt::print("bit depth : {}\n", ihdr_data.bit_depth);
-	fmt::print("img size  : {}\n", img.size());
+	SPDLOG_DEBUG("width     : {}\n", ihdr_data.width);
+	SPDLOG_DEBUG("height    : {}\n", ihdr_data.height);
+	SPDLOG_DEBUG("bit depth : {}\n", ihdr_data.bit_depth);
+	SPDLOG_DEBUG("img size  : {}\n", img.size());
 
 	int channels = 3, byte_depth = ihdr_data.bit_depth / 8;
 	int stride = channels * byte_depth;
@@ -51,10 +52,10 @@ void save_greyscale(
 	std::vector<uint8_t> const & img,
 	chunk_ihdr_data_t const & ihdr_data
 ) {
-	fmt::print("width     : {}\n", ihdr_data.width);
-	fmt::print("height    : {}\n", ihdr_data.height);
-	fmt::print("bit depth : {}\n", ihdr_data.bit_depth);
-	fmt::print("img size  : {}\n", img.size());
+	SPDLOG_DEBUG("width     : {}\n", ihdr_data.width);
+	SPDLOG_DEBUG("height    : {}\n", ihdr_data.height);
+	SPDLOG_DEBUG("bit depth : {}\n", ihdr_data.bit_depth);
+	SPDLOG_DEBUG("img size  : {}\n", img.size());
 
 	int range = (1 << ihdr_data.bit_depth) - 1;
 

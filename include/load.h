@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <fmt/format.h>
+#include <spdlog/spdlog.h>
 #include <zlib.h>
 
 #include "net.h"
@@ -48,12 +49,12 @@ chunk_t read_chunk(std::ifstream & ifs) {
 	if(ifs.gcount() != 4)
 		throw std::runtime_error("Unexpected end of file @ chunk CRC");
 
-	fmt::print("parsed chunk: {}\n", chunk);
+	SPDLOG_DEBUG("parsed chunk: {}", chunk);
 	return chunk;
 }
 
 std::vector<uint8_t> load(std::string const & filepath) {
-	fmt::print("{}\n", filepath);
+	SPDLOG_DEBUG("{}", filepath);
 	std::ifstream ifs(filepath, std::ios::binary);
 	if(!ifs)
 		throw std::runtime_error(fmt::format("Cannot open file {}", filepath));
@@ -86,7 +87,7 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	ihdr_data.width = ntohl(ihdr_data.width);
 	ihdr_data.height = ntohl(ihdr_data.height);
 
-	fmt::print("\n{}\n\n", ihdr_data);
+	SPDLOG_DEBUG("\n{}\n", ihdr_data);
 
 	if(ihdr_data.width == 0 || ihdr_data.height == 0)
 		throw std::runtime_error("Neither width nor height may be zero");
@@ -123,8 +124,8 @@ std::vector<uint8_t> load(std::string const & filepath) {
 			break;
 		default:
 			if(chunk.type & (1 << 5))
-				fmt::print(
-					"Ignoring unrecognized ancillary chunk: {}\n",
+				SPDLOG_WARN(
+					"Ignoring unrecognized ancillary chunk: {}",
 					chunk
 				);
 			else
@@ -138,14 +139,14 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	for(auto const & chunk : chunks[CHUNK_TYPE_IDAT]) {
 		packed.insert(packed.end(), chunk.data.begin(), chunk.data.end());
 	}
-	fmt::print("packed size: {}\n", packed.size());
+	SPDLOG_DEBUG("packed size: {}", packed.size());
 
 	std::vector<uint8_t> filtered = inflate(packed);
-	fmt::print("inflated size: {}\n", filtered.size());
+	SPDLOG_DEBUG("inflated size: {}", filtered.size());
 
 	std::vector<uint8_t> reconstructed
 		= reconstruct(filtered, ihdr_data, colours);
-	fmt::print("reconstructed size: {}\n", filtered.size());
+	SPDLOG_DEBUG("reconstructed size: {}", filtered.size());
 
 	std::vector<uint8_t> raw;
 	if(ihdr_data.interlace) {
@@ -153,7 +154,7 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	} else {
 		raw = reconstructed;
 	}
-	fmt::print("raw size: {}\n", raw.size());
+	SPDLOG_DEBUG("raw size: {}", raw.size());
 
 	return raw;
 
