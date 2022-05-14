@@ -17,14 +17,23 @@
 #include "constants.h"
 #include "chunk.h"
 #include "inflate.h"
-#include "filter.h"
+#include "reconstruct.h"
 #include "interlace.h"
 #include "netpbm.h"
 #include "chunk/ihdr.h"
 
 namespace rpng {
 
-chunk_t read_chunk(std::ifstream & ifs) {
+void parse_png_header(std::ifstream & ifs) {
+	uint64_t filetype = 0xdeadbeefdeadbeef;
+	ifs.read((char*)&filetype, 8);
+	if(ifs.gcount() != 8 || filetype != PNG_MAGIC)
+		throw std::runtime_error(
+			fmt::format("Unexpected PNG filetype: {:#x}", filetype)
+		);
+}
+
+chunk_t parse_chunk(std::ifstream & ifs) {
 	chunk_t chunk{};
 	uint32_t data;
 
@@ -53,22 +62,9 @@ chunk_t read_chunk(std::ifstream & ifs) {
 	return chunk;
 }
 
-std::vector<uint8_t> load(std::string const & filepath) {
-	SPDLOG_DEBUG("{}", filepath);
-	std::ifstream ifs(filepath, std::ios::binary);
-	if(!ifs)
-		throw std::runtime_error(fmt::format("Cannot open file {}", filepath));
-
-	// PNG header
-	uint64_t filetype = 0xdeadbeefdeadbeef;
-	ifs.read((char*)&filetype, 8);
-	if(ifs.gcount() != 8 || filetype != PNG_MAGIC)
-		throw std::runtime_error(
-			fmt::format("Unexpected PNG filetype: {:#x}", filetype)
-		);
-
-	// IHDR header
-	chunk_t ihdr = read_chunk(ifs);
+std::pair<chunk_ihdr_data_t, colour_properties_t>
+parse_ihdr(std::ifstream & ifs) {
+	chunk_t ihdr = parse_chunk(ifs);
 	if(ihdr.type != CHUNK_TYPE_IHDR) {
 		throw std::runtime_error(fmt::format(
 			"First chunk type is not IHDR: {}", ihdr
@@ -86,8 +82,6 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	memcpy(&ihdr_data, ihdr.data.data(), sizeof(chunk_ihdr_data_t));
 	ihdr_data.width = ntohl(ihdr_data.width);
 	ihdr_data.height = ntohl(ihdr_data.height);
-
-	SPDLOG_DEBUG("\n{}\n", ihdr_data);
 
 	if(ihdr_data.width == 0 || ihdr_data.height == 0)
 		throw std::runtime_error("Neither width nor height may be zero");
@@ -107,12 +101,14 @@ std::vector<uint8_t> load(std::string const & filepath) {
 			ihdr_data.bit_depth
 		));
 	}
+	return { ihdr_data, colours };
+}
 
-	// Read each chunk
+std::vector<uint8_t> pack_idat_chunks(std::ifstream & ifs) {
 	std::unordered_map<uint32_t, std::vector<chunk_t>> chunks;
-	while(ifs && ifs.peek() != decltype(ifs)::traits_type::eof()) {
+	while(ifs && ifs.peek() != std::ifstream::traits_type::eof()) {
 		chunk_t & chunk = [&]() -> chunk_t & {
-			chunk_t tmp = read_chunk(ifs);
+			chunk_t tmp = parse_chunk(ifs);
 			return chunks[tmp.type].emplace_back(std::move(tmp));
 		}();
 
@@ -139,7 +135,22 @@ std::vector<uint8_t> load(std::string const & filepath) {
 	for(auto const & chunk : chunks[CHUNK_TYPE_IDAT]) {
 		packed.insert(packed.end(), chunk.data.begin(), chunk.data.end());
 	}
-	SPDLOG_DEBUG("packed size: {}", packed.size());
+	return packed;
+}
+
+std::vector<uint8_t> load(std::string const & filepath) {
+	SPDLOG_DEBUG("{}", filepath);
+	std::ifstream ifs(filepath, std::ios::binary);
+	if(!ifs)
+		throw std::runtime_error(fmt::format("Cannot open file {}", filepath));
+
+	parse_png_header(ifs);
+
+	auto [ihdr_data, colours] = parse_ihdr(ifs);
+	SPDLOG_DEBUG("\n{}\n", ihdr_data);
+
+	std::vector<uint8_t> packed = pack_idat_chunks(ifs); 
+	SPDLOG_DEBUG("packed idat size: {}", packed.size());
 
 	std::vector<uint8_t> filtered = inflate(packed);
 	SPDLOG_DEBUG("inflated size: {}", filtered.size());
